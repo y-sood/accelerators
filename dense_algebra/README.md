@@ -14,7 +14,7 @@ By optimizing the thread-to-workload ratio, the custom kernel successfully satur
 - Achieved a peak effective bandwidth of **252.25 GB/s** (78.9% of the hardware's theoretical limit).
 - For narrow matrix geometries, the tuned memory access patterns actually **outperformed standard `cuBLAS` implementations**, demonstrating the value of geometry-specific kernel tuning.
 
-![Warp Scheduling Tuning](./assets/tuning.png)
+![Warp Scheduling Tuning](./assets/tuning_results.png)
 *Figure: Grid-search profiling of Thread block size vs Iterations per thread to maximize warp scheduling efficiency.*
 
 ![Peak Bandwidth vs cuBLAS](./assets/custom_vs_cublas_narrow.png)
