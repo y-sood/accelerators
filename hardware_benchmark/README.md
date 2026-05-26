@@ -1,16 +1,25 @@
-# Hardware Architecture Profiling
+# Cross-Architecture Hardware Profiling
 
 ### 📖 The Engineering Story
-Before optimizing complex software (like the SELL-C-σ sparse format or tiled GEMV kernels), it is critical to map the physical constraints of the target hardware. Using standard STREAM Triad benchmarking methodologies, I profiled the underlying limits of the UPPMAX Snowy cluster (Intel Xeon CPU & NVIDIA Tesla T4 GPU).
-
-*(Note: This section focuses purely on performance analysis and architectural profiling using standard benchmark suites, rather than custom software implementation).*
+High-performance code is heavily dependent on the underlying silicon. A memory access pattern that works well on an Intel chip might behave differently on AMD due to L3 cache topologies, and it will behave entirely differently on a GPU. Before optimizing complex numerical algorithms, I used the STREAM Triad benchmark to map the physical memory hierarchies and absolute bandwidth ceilings across three distinct architectures.
 
 ### 🛠️ The Profiling Methodology
-- **CPU Vectorization:** Profiled the differences between scalar code, compiler auto-vectorization (`-O3`, `-march=sandybridge`), and explicit AVX SIMD intrinsics.
-- **GPU Bandwidth:** Benchmarked theoretical vs. achievable VRAM limits for both single (`float`) and double (`double`) precision workloads.
+I evaluated memory-bound workloads (scalar, auto-vectorized SIMD, and CUDA) across three different hardware environments:
+- **Intel Xeon (Server CPU):** Profiled on the UPPMAX Snowy cluster to establish baseline enterprise data-center metrics.
+- **AMD Ryzen (Consumer/Workstation CPU):** Profiled to contrast AMD's specific L2/L3 cache layout and memory latency against Intel's architecture.
+- **NVIDIA GPU (Tesla T4):** Profiled using both single (`float`) and double (`double`) precision CUDA kernels to map VRAM bandwidth limits.
 
-### 🚀 The Results
-The profiling successfully mapped the exact boundaries of the L1 (32KB), L2 (256KB), and L3 (20MB) CPU caches. As the array sizes grew to $10^9$ elements, the data perfectly visualized the cache fall-off cliffs, establishing the absolute DRAM bandwidth ceilings that were used as targets for the custom CUDA kernels developed in this repository.
+### 🚀 The Results & Insights
+The profiling successfully visualized the exact boundaries where data spills out of L1, L2, and L3 caches into main memory (DRAM) across both CPU architectures. 
 
-![Cache Drop-off Boundaries](./assets/stream_triad_cache_dropoff.png)
-*Figure: Visualization of L1/L2/L3 cache fall-offs as problem size scales.*
+- **CPU Cache Topologies:** The data revealed distinct cache fall-off "cliffs" for both the Xeon and Ryzen chips as array sizes scaled up to $10^9$ elements, highlighting the exact array sizes where memory latency spikes.
+- **CPU vs. GPU Bandwidth:** Established the baseline DRAM limit for the CPUs (~30-50 GB/s) versus the massive VRAM throughput of the GPU (~250+ GB/s), proving mathematically why algorithms like Lanczos *must* be kept entirely on-device to avoid PCIe bottlenecking.
+
+![Xeon Cache Profile](./assets/stream_triad_benchmark_cpu.png)
+*Figure: L1/L2/L3 cache boundaries and SIMD vs Scalar bandwidth on Intel Xeon.*
+
+![Ryzen Cache Profile](./assets/stream_triad_benchmark_cpu_ryzen.png)
+*Figure: Comparative cache drop-offs and memory throughput on AMD Ryzen.*
+
+![GPU Bandwidth Profile](./assets/stream_triad_benchmark_gpu.png)
+*Figure: VRAM bandwidth saturation mapping on the NVIDIA Tesla T4.*

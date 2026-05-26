@@ -12,13 +12,19 @@ To fix this, I implemented the **SELL-C-σ** sparse matrix format:
 - Padded rows with zeros to ensure uniform length.
 - Wrote a fully on-device Lanczos algorithm loop to prevent PCIe transfer bottlenecks.
 
-### 🚀 The Results
+### 🚀 The Results & Pipeline Analysis
 By restructuring the data to fit the hardware, the SELL-C-σ SpMV kernel achieved nearly perfect warp coalescing. 
 - **Memory waste dropped from 78% to just 3%.**
-- Achieved a sustained effective memory bandwidth of **~148 GB/s** (nearly matching the hardware's practical limits).
+- Achieved a sustained effective memory bandwidth of **~148 GB/s**.
 
-![SpMV Bandwidth Comparison](./assets/spmv_crs_vs_sellc_single.png)
-*Figure: Effective memory bandwidth of CRS vs SELL-C-σ vs standard cuBLAS.*
+**End-to-End Algorithmic Scaling:**
+A critical insight from profiling the entire Lanczos pipeline was that the upfront cost of converting the matrix from CRS to SELL-C-σ grows much slower than the iterative Lanczos execution time. For realistically large 3D grids ($N > 150$), the conversion overhead becomes negligible, proving that paying the upfront penalty to restructure data into hardware-aware formats yields massive net-positive execution times for iterative solvers.
+
+![SpMV Bandwidth Comparison - Single precision](./assets/spmv_kernel_comparision_singleprec.png)
+*Figure: Effective memory bandwidth of CRS vs SELL-C-σ vs standard cuBLAS FP32.*
+![SpMV Bandwidth Comparison - Double precision](./assets/spmv_kernel_comparision_doubleprec.png)
+*Figure: Effective memory bandwidth of CRS vs SELL-C-σ vs standard cuBLAS FP64.*
+![Growth in costs associated with Lanczos on device](./assets/timing_pipeline.png)
 
 ### 📂 Files
 - [`lanczos_sellcsigma.cu`](./lanczos_sellcsigma.cu) - Contains the CRS matrix assembly, CPU-side SELL-C-σ conversion, the optimized SpMV kernel, and the on-device Lanczos solver.
